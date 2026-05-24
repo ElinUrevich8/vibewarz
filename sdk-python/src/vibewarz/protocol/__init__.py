@@ -1,0 +1,71 @@
+"""WebSocket protocol — message models + JSON codec.
+
+Shared by the bot SDK and the vibewarz server: both import from here so the
+wire format has exactly one source of truth.
+"""
+
+from .codec import (
+    decode_client,
+    decode_server,
+    encode_client,
+    encode_server,
+    safe_decode_client,
+    safe_decode_server,
+)
+from .messages import (
+    ActionC2S,
+    ApiKeyAuth,
+    AuthPayload,
+    ClientMessage,
+    ErrorCode,
+    ErrorS2C,
+    GameEndS2C,
+    GameStartS2C,
+    GuestAuth,
+    HelloC2S,
+    MatchFoundS2C,
+    MatchPlayer,
+    PingC2S,
+    PongS2C,
+    QueueC2S,
+    QueuedS2C,
+    RatingUpdateS2C,
+    ResignC2S,
+    ServerMessage,
+    TickRequestS2C,
+    TickResultS2C,
+    UserInfo,
+    WelcomeS2C,
+)
+
+__all__ = [
+    "decode_client",
+    "decode_server",
+    "encode_client",
+    "encode_server",
+    "safe_decode_client",
+    "safe_decode_server",
+    "ActionC2S",
+    "ApiKeyAuth",
+    "AuthPayload",
+    "ClientMessage",
+    "ErrorCode",
+    "ErrorS2C",
+    "GameEndS2C",
+    "GameStartS2C",
+    "GuestAuth",
+    "HelloC2S",
+    "MatchFoundS2C",
+    "MatchPlayer",
+    "PingC2S",
+    "PongS2C",
+    "QueueC2S",
+    "QueuedS2C",
+    "RatingUpdateS2C",
+    "ResignC2S",
+    "ServerMessage",
+    "TickRequestS2C",
+    "TickResultS2C",
+    "UserInfo",
+    "WelcomeS2C",
+]

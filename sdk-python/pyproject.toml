@@ -1,0 +1,38 @@
+[project]
+name = "vibewarz"
+version = "0.1.0"
+description = "Python SDK for writing vibewarz bots — play live or locally"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = ["bot", "game", "arena", "vibewarz", "ai"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Games/Entertainment",
+]
+dependencies = [
+  "websockets>=12.0",
+  "httpx>=0.27",
+  "typer>=0.12",
+  "rich>=13.7",
+  "pydantic>=2.7",
+  "vibewarz-games>=0.1,<0.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+vibewarz = "vibewarz.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vibewarz"]

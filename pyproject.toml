@@ -1,0 +1,24 @@
+[project]
+name = "vibewarz-workspace"
+version = "0.1.0"
+description = "vibewarz OSS — workspace root"
+requires-python = ">=3.11"
+
+[tool.uv.workspace]
+members = ["games", "sdk-python"]
+
+[tool.uv.sources]
+vibewarz-games = { workspace = true }
+vibewarz = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["games/tests", "sdk-python/tests"]
+asyncio_mode = "auto"

@@ -1,0 +1,33 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Set up Python
+        run: uv python install 3.11
+      - name: Build vibewarz-games
+        working-directory: games
+        run: uv build
+      - name: Build vibewarz
+        working-directory: sdk-python
+        run: uv build
+      - name: Publish vibewarz-games to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        working-directory: games
+        run: uv publish
+      - name: Publish vibewarz to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        working-directory: sdk-python
+        run: uv publish
