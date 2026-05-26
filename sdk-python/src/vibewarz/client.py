@@ -15,6 +15,7 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
+import httpx
 import websockets
 from websockets.asyncio.client import ClientConnection
 
@@ -28,6 +29,7 @@ from .protocol import (
     GuestAuth,
     HelloC2S,
     QueueC2S,
+    ReplayEnvelope,
     ServerMessage,
     UserInfo,
     WelcomeS2C,
@@ -104,6 +106,45 @@ class Client:
                 bot_label=bot_label,
             )
         )
+
+    async def fetch_replay(
+        self,
+        match_id: str,
+        *,
+        http: httpx.AsyncClient | None = None,
+    ) -> ReplayEnvelope:
+        """Download a finished match's replay as a `ReplayEnvelope`.
+
+        Hits `GET /api/replays/{match_id}` on the same host as the WS
+        connection. The prod backend serves replays via a 302 to a presigned
+        S3 URL; httpx follows that transparently — unlike the browser, the
+        SDK isn't subject to cross-origin CORS rules, so this works without
+        any S3 bucket configuration.
+
+        Replays carry full (unredacted) state for hidden-information games
+        like poker. Apply per-seat redaction yourself if you need a POV view.
+
+        `http` is an injection seam for tests (pass an httpx.AsyncClient
+        with a MockTransport). Production callers leave it None and one
+        is created per call.
+        """
+        if http is None:
+            async with httpx.AsyncClient(
+                follow_redirects=True, timeout=30.0
+            ) as owned:
+                return await self._fetch_replay_with(owned, match_id)
+        return await self._fetch_replay_with(http, match_id)
+
+    async def _fetch_replay_with(
+        self, http: httpx.AsyncClient, match_id: str
+    ) -> ReplayEnvelope:
+        url = f"{api_http_url(self.url)}/api/replays/{match_id}"
+        headers: dict[str, str] = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        resp = await http.get(url, headers=headers)
+        resp.raise_for_status()
+        return ReplayEnvelope.model_validate(resp.json())
 
 
 # Public production WS endpoint. Override with VIBEWARZ_API_URL when

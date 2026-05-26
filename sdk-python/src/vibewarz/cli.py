@@ -3,14 +3,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
 import typer
 
 from .bot import Bot
+from .client import Client, default_api_url
 from .play_local import play as play_in_process
 from .runner import run as run_bot
 
@@ -98,17 +101,81 @@ def play_local(
 
 
 @app.command()
-def replay(match_id: str) -> None:
-    """Print a replay's tick log to stdout (pretty)."""
-    # Naively walk ./data/replays for the file — useful when running locally.
+def replay(
+    match_id: str,
+    api_url: str = typer.Option(
+        None,
+        "--api-url",
+        envvar="VIBEWARZ_API_URL",
+        help="Remote API to fetch from (e.g. wss://api.vibewarz.com/ws). When unset, walks ./data/replays for a local JSONL file.",
+    ),
+    api_key: str = typer.Option(
+        None,
+        "--api-key",
+        envvar="VIBEWARZ_API_KEY",
+        help="API key for authenticated fetch. Replays are currently public; this is forward-compat.",
+    ),
+    pretty: bool = typer.Option(
+        None,
+        "--pretty/--compact",
+        help=(
+            "Pretty-print (indented) vs compact (one JSON object per line). "
+            "Defaults: --pretty for local file reads (open-and-skim), "
+            "--compact for remote fetches (jq-friendly)."
+        ),
+    ),
+) -> None:
+    """Print a replay's tick log to stdout.
+
+    With --api-url (or VIBEWARZ_API_URL): fetches over HTTP from the live
+    API. Default output is compact, one JSON object per line — pipe to jq:
+
+      vibewarz replay m_abc1234 | jq 'select(.type=="game_end")'
+
+    Without --api-url: walks ./data/replays for a JSONL file (the local
+    backend writes there during dev). Default output is indented for
+    direct reading; pass --compact if you're piping somewhere.
+    """
+    if api_url:
+        envelope = asyncio.run(_fetch_remote_replay(match_id, api_url, api_key))
+        events = envelope.get("events", [])
+        typer.echo(
+            f"fetched {len(events)} events for {match_id} (game={envelope.get('game_id')})",
+            err=True,
+        )
+        # Remote default: compact (one-per-line) so the output pipes
+        # cleanly through jq without `slurp` mode.
+        indent = 2 if pretty is True else None
+        for evt in events:
+            typer.echo(json.dumps(evt, indent=indent))
+        return
+
     root = Path("./data/replays").resolve()
     candidates = list(root.rglob(f"{match_id}.jsonl"))
     if not candidates:
-        typer.echo(f"No replay file found for {match_id} under {root}", err=True)
+        typer.echo(
+            f"No replay file found for {match_id} under {root}. "
+            "Set --api-url or VIBEWARZ_API_URL to fetch from the live API.",
+            err=True,
+        )
         raise typer.Exit(1)
+    # Local default: indented. Preserves the pre-remote-mode behavior of
+    # `vibewarz replay <id>` for users who just want to eyeball a file.
+    indent = None if pretty is False else 2
     for line in candidates[0].read_text().splitlines():
+        if not line.strip():
+            continue
         obj = json.loads(line)
-        typer.echo(json.dumps(obj, indent=2))
+        typer.echo(json.dumps(obj, indent=indent))
+
+
+async def _fetch_remote_replay(match_id: str, api_url: str, api_key: str | None) -> dict:
+    # We don't need a WS connection for the fetch, but Client owns the
+    # url→http translation logic. Use it without opening a socket.
+    key = api_key or os.environ.get("VIBEWARZ_API_KEY")
+    client = Client(url=api_url or default_api_url(), api_key=key)
+    envelope = await client.fetch_replay(match_id)
+    return envelope.model_dump(mode="json")
 
 
 if __name__ == "__main__":
