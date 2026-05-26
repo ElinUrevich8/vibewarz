@@ -127,23 +127,31 @@ class Poker(Game):
         return [state["action_on"]]
 
     def view_for(self, state: dict, seat: int) -> dict:
-        """Strip the remaining deck and other seats' hole cards. At showdown
-        the cards are public (engine sets `showdown_hands`); the deck is
-        always hidden because players shouldn't see undealt cards.
+        """Strip the seed, the remaining deck, and other seats' hole cards.
+        At showdown the cards are public (engine sets `showdown_hands`); the
+        deck is always hidden because players shouldn't see undealt cards.
+
+        `seed` must be omitted: `new_shuffled_deck` is deterministic in
+        `(seed, hand_number)`, so any client that learns the seed can locally
+        reconstruct every opponent's hole cards.
         """
         show_all = state.get("showdown_hands") is not None
         view_players = []
         for p in state["players"]:
-            visible = (p["seat"] == seat) or show_all or not p["in_hand"]
+            # Cards are visible only to their owner or at showdown. A player
+            # who folds this hand keeps `hole_cards` in the authoritative
+            # state (for audit / replay), but their cards must remain hidden
+            # from every other seat — in real poker, mucked cards are never
+            # shown.
+            visible = (p["seat"] == seat) or show_all
             view_players.append({
                 **p,
                 "hole_cards": p["hole_cards"] if (visible and p["hole_cards"]) else [],
             })
-        return {
-            **state,
-            "deck": [],
-            "players": view_players,
-        }
+        view = {k: v for k, v in state.items() if k != "seed"}
+        view["deck"] = []
+        view["players"] = view_players
+        return view
 
     def legal_actions(self, state: dict, seat: int) -> list[dict]:
         if state["action_on"] != seat:

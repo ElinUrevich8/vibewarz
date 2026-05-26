@@ -304,6 +304,24 @@ def test_view_for_redacts_other_seats_hole_cards():
     assert v0["deck"] == []  # deck never leaked
 
 
+def test_view_for_never_leaks_seed():
+    """Regression: the seed used to shuffle the deck is deterministic, so
+    leaking it lets a client locally reproduce every opponent's hole cards
+    via `new_shuffled_deck(seed, hand_number)`. The per-seat view MUST omit
+    `seed`; the authoritative state retains it for server-side replay.
+    """
+    p = Poker()
+    s = p.initial_state(seed=99, num_players=3)
+    assert s["seed"] == 99  # authoritative state still has it
+    for seat in range(3):
+        v = p.view_for(s, seat)
+        assert "seed" not in v, f"seed leaked to seat {seat}"
+    # Also at showdown — the seed is still secret for any subsequent hand.
+    s_showdown = {**s, "showdown_hands": {0: "X", 1: "Y", 2: "Z"}}
+    for seat in range(3):
+        assert "seed" not in p.view_for(s_showdown, seat)
+
+
 def test_view_for_reveals_all_at_showdown():
     p = Poker()
     s = p.initial_state(seed=99, num_players=2)
@@ -314,21 +332,26 @@ def test_view_for_reveals_all_at_showdown():
     assert v["players"][1]["hole_cards"] != []  # revealed
 
 
-def test_view_for_reveals_folded_seats_cards_are_hidden():
-    """Folded seats' cards should also be hidden (until showdown reveal).
-    The current rule: visible to a seat iff (own seat) OR (showdown) OR
-    (target seat folded — but we don't reveal mucked cards). The test below
-    verifies the practical behavior: hidden by default."""
+def test_view_for_hides_folded_seats_hole_cards():
+    """Mucked cards are never shown to other players in real poker. The
+    authoritative state retains `hole_cards` after a fold (for audit and
+    replay) — the per-seat view MUST hide them from every other seat until
+    showdown.
+    """
     p = Poker()
     s = p.initial_state(seed=99, num_players=3)
-    # Mark seat 1 as folded (in_hand=False).
+    # Mark seat 1 as folded (in_hand=False) — hole_cards still populated
+    # in the authoritative state, matching what betting.apply_action does.
     players = [dict(pl) for pl in s["players"]]
     players[1] = {**players[1], "in_hand": False, "folded": True}
     s = {**s, "players": players}
+    assert players[1]["hole_cards"]  # precondition: folded player still holds cards in state
+    # Seat 0 (still in hand) must not see seat 1's mucked cards.
     v0 = p.view_for(s, 0)
-    # Folded seat is "visible" because not in_hand — they mucked. Their
-    # cards are visually absent (we render an empty slot).
-    assert v0["players"][1]["hole_cards"] == players[1]["hole_cards"]
+    assert v0["players"][1]["hole_cards"] == []
+    # Seat 1 (the folder themselves) still sees their own cards.
+    v1 = p.view_for(s, 1)
+    assert v1["players"][1]["hole_cards"] == players[1]["hole_cards"]
 
 
 # ── hand_eval wrapper ──────────────────────────────────────────────────────
