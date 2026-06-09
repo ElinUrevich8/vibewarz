@@ -113,6 +113,65 @@
   color: var(--vw-color-text);
 }
 
+/* Roster legend, shown in the letterbox dead space when a board is re-framed
+   off its native ratio. Side bands (frame wider than native) → LEFT, vertical;
+   top/bottom bands (frame taller) → TOP, horizontal. See ReplayFrame. */
+.vw-frame__legend {
+  position: absolute;
+  display: flex;
+  pointer-events: none;
+  font-family: var(--vw-font-mono);
+  font-size: 0.8rem;
+  color: var(--vw-color-text);
+}
+
+/* Centered in the band (midway between the board edge and the frame edge) via
+   the --vw-band-center/-size vars ReplayFrame sets; falls back to an inset. */
+.vw-frame[data-band="side"] .vw-frame__legend {
+  left: var(--vw-band-center, 1.6rem);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.55rem;
+  max-width: calc(var(--vw-band-size, 30%) - 1rem);
+}
+
+.vw-frame[data-band="block"] .vw-frame__legend {
+  top: var(--vw-band-center, 1.5rem);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.9rem;
+  max-width: 92%;
+}
+
+.vw-frame__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.vw-frame__legend-item--dead {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.vw-frame__legend-item--me {
+  font-weight: 700;
+}
+
+.vw-frame__legend-chip {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 .vw-replay__empty {
   border: 1px solid var(--vw-color-border);
   border-radius: var(--vw-radius);
@@ -246,6 +305,18 @@
 .vw-blast__hud-dead {
   margin-left: auto;
   color: var(--vw-color-danger);
+}
+
+/* Curve board — a square (1:1) canvas. Unlike the 16:9 boards (width-bound in
+   every frame), a square board is height-bound in the 16:9 frame, so it fits by
+   height and caps width, meet-fitting inside the flex-centered .vw-frame__stage. */
+.vw-curve__canvas {
+  display: block;
+  /* The canvas is a replaced element with a square backing buffer, so capping
+     both axes meet-fits it (preserving 1:1) into the flex-centered stage —
+     fills the 1:1 frame, centers height-bound in 16:9 / width-bound in 9:16. */
+  max-width: 100%;
+  max-height: 100%;
 }
 
 /* Vibelords board */
