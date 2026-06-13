@@ -40,7 +40,7 @@ export type {
   ChinesePokerAction,
 } from "./chinese_poker/types";
 export { Card, CardRow, type CardSize } from "./poker/card";
-export { ChipStack, DealerButton } from "./poker/chip";
+export { ChipStack, ChipPile, DealerButton } from "./poker/chip";
 export {
   legalKinds,
   type PokerState,
