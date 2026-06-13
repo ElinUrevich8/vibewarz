@@ -11,6 +11,9 @@ const POKER_TURN_DURATION_MS = 15_000;
 const TIMER_DANGER_SECONDS = 5;
 const TIMER_TICK_SOUND_SECONDS = 10;
 
+export const LIVE_PAYOUT_MS = 3000;
+export const REPLAY_PAYOUT_MS = 2000;
+
 let timerAudioContext: AudioContext | null = null;
 
 export type SeatInfo = {
